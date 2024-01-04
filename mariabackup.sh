@@ -29,6 +29,8 @@ function backup_full(){
 }
 
 function backup_inc(){
+    last_full_name=$(find ${folder_backup} -type f -name ${backup_full_name}-*.gz -printf "%T@ %Tc %p\n" |sort -n |tail -n 1)
+    last_full_number=$(echo "${last_full_name}" | cut -f4 -d/ |cut -f2 -d- |cut -f1 -d.)
     last_inc_name=$(find ${folder_backup} -type f -name ${backup_inc_name}-*.gz -printf "%T@ %Tc %p\n" |sort -n |tail -n 1)
     last_inc_number=$(echo "${last_inc_name}" | cut -f4 -d/ |cut -f2 -d- |cut -f1 -d.)
     echo "Last incremental backup number is ${last_inc_number}"
@@ -37,11 +39,11 @@ function backup_inc(){
     mariabackup --backup --stream=mbstream --incremental-basedir=${folder_backup}/${backup_full_name}-${last_full_number} --user=root --extra-lsndir=${folder_backup}/${backup_inc_name}-${inc_backup_count} | gzip > ${folder_backup}/${backup_inc_name}-${inc_backup_count}.gz
 }
 
-function main(){
-    backup_full "$@"
-    backup_inc "$@"
-}
+# function main(){
+#     backup_full "$@"
+#     backup_inc "$@"
+# }
 
+# main "$@"
 
-main "$@"
-
+$1 "$@" $2 "$@"
