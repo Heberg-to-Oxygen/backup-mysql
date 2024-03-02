@@ -3,7 +3,7 @@
 # Author : DJERBI Florian
 # Object : Variable Template
 # Creation Date : 01/05/2024
-# Modification Date : 01/05/2024
+# Modification Date : 03/02/2024
 ###########################
 
 #
@@ -11,6 +11,7 @@
 #
 
 incremantal_day=7
+full_retention=3
 folder_backup=""
 backup_full_name="backup_full"
 backup_inc_name="backup_inc"

@@ -1,7 +1,7 @@
 #/bin/bash
 ###########################
 # Author : DJERBI Florian
-# Object : Run full backup and incremantal backup for all mariadb
+# Object : Run full backup and incremental backup for all mariadb
 # Creation Date : 01/04/2024
 # Modification Date : 01/05/2024
 ###########################
@@ -43,7 +43,7 @@ function check_last_full(){
 	backup_full "${last_full_number}"
     else
         last_full_number=$(echo "${last_full_name}" | cut -f4 -d/ |cut -f2 -d- |cut -f1 -d.)
-        last_full_date=$(find ${folder_backup} -type f -name ${backup_full_name}-*.gz -mtime -${incremantal_day} -printf "%T@ %Tc %p\n" | wc -l) 	# Prod
+        last_full_date=$(find ${folder_backup} -type f -name ${backup_full_name}-*.gz -mtime -${incremental_day} -printf "%T@ %Tc %p\n" | wc -l) 	# Prod
         # last_full_date=$(find ${folder_backup} -type f -name ${backup_full_name}-*.gz -mmin -420 -printf "%T@ %Tc %p\n" | wc -l)			# Dev
         if [ ${last_full_date} -eq 0 ];then
             echo "Run full backup !"
