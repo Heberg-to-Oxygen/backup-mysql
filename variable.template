@@ -15,6 +15,7 @@ full_retention=3
 folder_backup=""
 backup_full_name="backup_full"
 backup_inc_name="backup_inc"
+log_file="${folder_backup}/backup.log"
 
 # Db information for backup
 db_host="localhost" 
