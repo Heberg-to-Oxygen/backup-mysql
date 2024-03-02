@@ -14,6 +14,14 @@ source variable
 #
 # FUNCTIONS
 #
+
+function init_script(){
+    if [ -n ${folder_backup} ] && [ -n ${log_file} ];then
+        mkdir -p ${folder_backup}
+        touch ${log_file}
+    fi
+}
+
 function backup_full(){
     last_full_number=$1
     last_full_number=$((${last_full_number}+1))
@@ -70,5 +78,10 @@ function check_old_backup(){
     fi
 }
 
-check_last_full "$@"
-check_old_backup "$@"
+function main(){
+    init_script "$@"
+    check_last_full "$@"
+    check_old_backup "$@"
+}
+
+main "$@"
