@@ -3,14 +3,14 @@
 # Author : DJERBI Florian
 # Object : Variable Template
 # Creation Date : 01/05/2024
-# Modification Date : 03/02/2024
+# Modification Date : 03/04/2024
 ###########################
 
 #
 # VARIABLES
 #
 
-incremantal_day=7                           # day before full backup
+incremental_day=7                           # day before full backup
 full_retention=3                            # retention day for full backup
 folder_backup=""                            # folder for backups
 log_file="${folder_backup}/backup.log"      # log file
