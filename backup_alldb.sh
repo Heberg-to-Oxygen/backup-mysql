@@ -70,7 +70,6 @@ function check_last_full(){
     fi
 }
 
-
 function check_old_backup(){
     count_full_backup=$(find ${folder_backup} -type f -name ${backup_full_name}-*.gz| wc -l)
     if [ ${count_full_backup} -gt ${full_retention} ]; then
@@ -78,7 +77,7 @@ function check_old_backup(){
 	if [ -n ${folder_backup} ] && [ -n ${backup_full_name} ] && [ -n ${old_full_number} ] ;then
 	    rm -rf ${folder_backup}/${backup_full_name}-${old_full_number}*
 	    rm -rf ${folder_backup}/${backup_inc_name}-${old_full_number}*
-            echo "Delete full and incremental backup ${old_full_number}" >> ${log_file}
+            msg "Delete full and incremental backup ${old_full_number}"
 	fi
     fi
 }
