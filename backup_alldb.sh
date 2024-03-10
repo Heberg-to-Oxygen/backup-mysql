@@ -23,7 +23,7 @@ function msg(){
 }
 
 function init_script(){
-    if [ -n ${folder_backup} ] && [ -n ${log_file} ];then
+    if [ -n ${folder_backup} ] && [ -n ${log_file} ] && [ -n ${last_log_file} ];then
         mkdir -p ${folder_backup}
         touch ${log_file}
 	touch ${last_log_file}
@@ -42,11 +42,11 @@ function backup_inc(){
     last_inc_number=$(echo "${last_inc_name}" | cut -f4 -d/ |cut -f3 -d- |cut -f1 -d.)
     new_inc_number=$((${last_inc_number}+1))
     if [[ -z ${last_inc_name} ]];then
-        msg "Run inc backup by last full !"
+        msg "Run incremental backup by last full !"
         mariabackup --backup --stream=mbstream --user=${db_user} --password=${db_password} --incremental-basedir=${folder_backup}/${backup_full_name}-${last_full_number} --extra-lsndir=${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number} | gzip > ${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number}.gz
     else
-        msg "Run inc backup by last inc !"
-        mariabackup --backup --stream=mbstream --user=${db_user} --password=${db_password} --incremental-basedir=${folder_backup}/${backup_inc_name}-${last_full_number}-${last_inc_number} --extra-lsndir=${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number} >> ${log_file} | gzip > ${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number}.gz
+        msg "Run incremental backup by last incremental !"
+        mariabackup --backup --stream=mbstream --user=${db_user} --password=${db_password} --incremental-basedir=${folder_backup}/${backup_inc_name}-${last_full_number}-${last_inc_number} --extra-lsndir=${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number} | gzip > ${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number}.gz
     fi
 }
 
@@ -60,8 +60,9 @@ function check_last_full(){
     else
         last_full_number=$(echo "${last_full_name}" | cut -f4 -d/ |cut -f2 -d- |cut -f1 -d.)
 	((incremental_day-=1))
-        last_full_count=$(find ${folder_backup} -type f -name ${backup_full_name}-*.gz -mtime -${incremental_day} -printf "%T@ %Tc %p\n" | wc -l) 	# Prod
-        # last_full_count=$(find ${folder_backup} -type f -name ${backup_full_name}-*.gz -mmin -420 -printf "%T@ %Tc %p\n" | wc -l)			# Dev
+        last_full_count=$(find ${folder_backup} -type f -name ${backup_full_name}-*.gz -mtime -${incremental_day} -printf "%T@ %Tc %p\n" | wc -l)
+        echo "find ${folder_backup} -type f -name ${backup_full_name}-*.gz -mtime -${incremental_day} -printf "%T@ %Tc %p\n" | wc -l)" 	# Prod
+        find ${folder_backup} -type f -name ${backup_full_name}-*.gz -mtime -${incremental_day} -printf "%T@ %Tc %p\n"
         if [ ${last_full_count} -eq 0 ];then
             msg "Run full backup !"
             sleep 3
@@ -70,19 +71,6 @@ function check_last_full(){
             sleep 3
             backup_inc "${last_full_number}"
         fi
-    fi
-}
-
-function sync_s3(){
-    if [ ${s3_backup} == "yes" ];then
-	msg "Sync backup into S3"
-	aws s3 sync ${folder_backup} s3://${s3_name}/${s3_path} >> ${log_file}
-        s3_retention_date=$(date +"%Y-%m-%d %T" -d "-${s3_retention_day} days")
-	s3_number_old_backup=$(aws s3 ls --recursive s3://${s3_name}/${s3_path}/ |grep -vw ${s3_path} | awk -v prev="${s3_retention_date}" '$0 < prev {print $0}' | sort -n |wc -l)
-	if [ ${s3_number_old_backup} -gt 0 ];then
-	    msg "Delete ${s3_number_old_backup} old backup in s3"
-	    aws s3 ls --recursive s3://${s3_name}/${s3_path}/ |grep -vw "${s3_path}/" | awk -v prev="${s3_retention_date}" '$0 < prev {print $4}' | sort -n | xargs -n1 'KEY' aws s3 rm s3://${s3_name}/'KEY' >> ${log_file}
-	fi
     fi
 }
 
@@ -98,12 +86,32 @@ function check_old_backup(){
     fi
 }
 
+function sync_s3(){
+    if [ ${s3_backup} == "yes" ];then
+	msg "Sync backup into S3"
+	aws s3 sync ${folder_backup} s3://${s3_name}/${s3_path} >> ${last_log_file}
+        s3_retention_date=$(date +"%Y-%m-%d %T" -d "-${s3_retention_day} days")
+	s3_number_old_backup=$(aws s3 ls --recursive s3://${s3_name}/${s3_path}/ |grep -vw ${s3_path} | awk -v prev="${s3_retention_date}" '$0 < prev {print $0}' | sort -n |wc -l)
+	if [ ${s3_number_old_backup} -gt 0 ];then
+	    msg "Delete ${s3_number_old_backup} old backup in s3"
+	    aws s3 ls --recursive s3://${s3_name}/${s3_path}/ |grep -vw "${s3_path}/" | awk -v prev="${s3_retention_date}" '$0 < prev {print $4}' | sort -n | xargs -n1 'KEY' aws s3 rm s3://${s3_name}/'KEY' >> ${last_log_file}
+	fi
+    fi
+}
+
+function last_log_in_log(){
+    cat ${last_log_file} >> ${log_file}
+}
+
 function main(){
+    datetime_now=$(date +"%D %T" )
+    echo "[${datetime_now}] : Run script backup mariadb" > ${last_log_file}
     init_script "$@"
     check_last_full "$@"
     check_old_backup "$@"
+    sync_s3 "$@"
+    last_log_in_log "$@"
 }
 
 main "$@"
-sync_s3
 
