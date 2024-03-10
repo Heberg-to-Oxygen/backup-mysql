@@ -3,13 +3,15 @@
 # Author : DJERBI Florian
 # Object : Run full backup and incremental backup for all mariadb
 # Creation Date : 01/04/2024
-# Modification Date : 03/04/2024
+# Modification Date : 03/10/2024
 ###########################
 
 #
 # VARIABLES
 #
 source variable
+log_file=${folder_backup}/backup.log
+last_log_file=${folder_backup}/backup_last.log
 
 #
 # FUNCTIONS
@@ -17,13 +19,14 @@ source variable
 
 function msg(){
     datetime_now=$(date +"%D %T" )
-    echo "[${datetime_now}] : $1" >> ${log_file}
+    echo "[${datetime_now}] : $1" >> ${last_log_file}
 }
 
 function init_script(){
     if [ -n ${folder_backup} ] && [ -n ${log_file} ];then
         mkdir -p ${folder_backup}
         touch ${log_file}
+	touch ${last_log_file}
     fi
 }
 
@@ -71,9 +74,15 @@ function check_last_full(){
 }
 
 function sync_s3(){
-    if [ ${backup_s3} == "yes" ];then
+    if [ ${s3_backup} == "yes" ];then
 	msg "Sync backup into S3"
-	aws s3 sync ${folder_backup} s3://${s3_name}/${s3_path}
+	aws s3 sync ${folder_backup} s3://${s3_name}/${s3_path} >> ${log_file}
+        s3_retention_date=$(date +"%Y-%m-%d %T" -d "-${s3_retention_day} days")
+	s3_number_old_backup=$(aws s3 ls --recursive s3://${s3_name}/${s3_path}/ |grep -vw ${s3_path} | awk -v prev="${s3_retention_date}" '$0 < prev {print $0}' | sort -n |wc -l)
+	if [ ${s3_number_old_backup} -gt 0 ];then
+	    msg "Delete ${s3_number_old_backup} old backup in s3"
+	    aws s3 ls --recursive s3://${s3_name}/${s3_path}/ |grep -vw "${s3_path}/" | awk -v prev="${s3_retention_date}" '$0 < prev {print $4}' | sort -n | xargs -n1 'KEY' aws s3 rm s3://${s3_name}/'KEY' >> ${log_file}
+	fi
     fi
 }
 
@@ -95,6 +104,6 @@ function main(){
     check_old_backup "$@"
 }
 
-# main "$@"
+main "$@"
 sync_s3
 
