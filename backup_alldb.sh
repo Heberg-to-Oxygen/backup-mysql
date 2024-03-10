@@ -61,7 +61,7 @@ function check_last_full(){
         last_full_number=$(echo "${last_full_name}" | cut -f4 -d/ |cut -f2 -d- |cut -f1 -d.)
 	((incremental_day-=1))
         last_full_count=$(find ${folder_backup} -type f -name ${backup_full_name}-*.gz -mtime -${incremental_day} -printf "%T@ %Tc %p\n" | wc -l)
-        echo "find ${folder_backup} -type f -name ${backup_full_name}-*.gz -mtime -${incremental_day} -printf "%T@ %Tc %p\n" | wc -l)" 	# Prod
+        echo "find ${folder_backup} -type f -name ${backup_full_name}-*.gz -mtime -${incremental_day} -printf "%T@ %Tc %p\n" | wc -l)"
         find ${folder_backup} -type f -name ${backup_full_name}-*.gz -mtime -${incremental_day} -printf "%T@ %Tc %p\n"
         if [ ${last_full_count} -eq 0 ];then
             msg "Run full backup !"
@@ -91,10 +91,12 @@ function sync_s3(){
 	msg "Sync backup into S3"
 	aws s3 sync ${folder_backup} s3://${s3_name}/${s3_path} >> ${last_log_file}
         s3_retention_date=$(date +"%Y-%m-%d %T" -d "-${s3_retention_day} days")
-	s3_number_old_backup=$(aws s3 ls --recursive s3://${s3_name}/${s3_path}/ |grep -vw ${s3_path} | awk -v prev="${s3_retention_date}" '$0 < prev {print $0}' | sort -n |wc -l)
-	if [ ${s3_number_old_backup} -gt 0 ];then
+	s3_old_backup=$(aws s3 ls --recursive s3://h2o-backup-mysql/lab1.ta-info.net/ |grep "${backup_full_name}" |grep gz |awk -v prev="${s3_retention_date}" '$0 < prev {print $4}') 
+	s3_old_full_number=$(echo ${s3_old_backup} |cut -f2 -d/|cut -f2 -d- |cut -f1 -d.)
+	if [ -n "${s3_old_full_number}" ];then
 	    msg "Delete ${s3_number_old_backup} old backup in s3"
-	    aws s3 ls --recursive s3://${s3_name}/${s3_path}/ |grep -vw "${s3_path}/" | awk -v prev="${s3_retention_date}" '$0 < prev {print $4}' | sort -n | xargs -n1 'KEY' aws s3 rm s3://${s3_name}/'KEY' >> ${last_log_file}
+	    aws s3 ls --recursive s3://${s3_name}/${s3_path}/ |grep "${s3_path}/${backup_full_name}-${s3_old_full_number}" |awk '{print $4}' |xargs -n1 'KEY' aws s3 rm s3://${s3_name}/'KEY' >> ${last_log_file}
+	    aws s3 ls --recursive s3://${s3_name}/${s3_path}/ |grep "${s3_path}/${backup_inc_name}-${s3_old_full_number}" |awk '{print $4}' |xargs -n1 'KEY' aws s3 rm s3://${s3_name}/'KEY' >> ${last_log_file}
 	fi
     fi
 }
