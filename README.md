@@ -6,16 +6,23 @@
 
 ## Variables
 ```
-incremantal_day=7                           # day before full backup
-full_retention=3                            # retention day for full backup
-folder_backup=""                            # folder for backups
-log_file="${folder_backup}/backup.log"      # log file
-backup_full_name="backup_full"              # name file/folder full backup
-backup_inc_name="backup_inc"                # name file/folder inc backup
+incremental_day=7               # day before full backup
+full_retention=3                # retention day for full backup
+folder_backup=""                # folder for backups
+backup_full_name="backup_full"  # name file/folder full backup
+backup_inc_name="backup_inc"    # name file/folder inc backup
+
+# Db information for backup
 db_host="localhost"
 db_port=3306
-db_user=""                                  # set your user password
-db_password=""                              # set your password db
+db_user=""                      # set your user password
+db_password=""                  # set your password db
+
+# S3 config
+s3_backup=no				    # yes or no
+s3_retention_day=90			    # retention of days in S3
+s3_name="h2o-backup-mysql"		# s3 name on aws or other cloud
+s3_path="lab1.ta-info.net"		# if our use sub folder
 ```
 
 ## Requirement
