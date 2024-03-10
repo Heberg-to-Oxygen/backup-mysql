@@ -43,7 +43,7 @@ function backup_inc(){
         mariabackup --backup --stream=mbstream --user=${db_user} --password=${db_password} --incremental-basedir=${folder_backup}/${backup_full_name}-${last_full_number} --extra-lsndir=${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number} | gzip > ${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number}.gz
     else
         msg "Run inc backup by last inc !"
-        mariabackup --backup --stream=mbstream --user=${db_user} --password=${db_password} --incremental-basedir=${folder_backup}/${backup_inc_name}-${last_full_number}-${last_inc_number} --extra-lsndir=${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number} | gzip > ${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number}.gz
+        mariabackup --backup --stream=mbstream --user=${db_user} --password=${db_password} --incremental-basedir=${folder_backup}/${backup_inc_name}-${last_full_number}-${last_inc_number} --extra-lsndir=${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number} >> ${log_file} | gzip > ${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number}.gz
     fi
 }
 
@@ -70,6 +70,13 @@ function check_last_full(){
     fi
 }
 
+function sync_s3(){
+    if [ ${backup_s3} == "yes" ];then
+	msg "Sync backup into S3"
+	aws s3 sync ${folder_backup} s3://${s3_name}/${s3_path}
+    fi
+}
+
 function check_old_backup(){
     count_full_backup=$(find ${folder_backup} -type f -name ${backup_full_name}-*.gz| wc -l)
     if [ ${count_full_backup} -gt ${full_retention} ]; then
@@ -88,4 +95,6 @@ function main(){
     check_old_backup "$@"
 }
 
-main "$@"
+# main "$@"
+sync_s3
+
