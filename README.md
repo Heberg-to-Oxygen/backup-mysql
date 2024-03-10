@@ -51,11 +51,14 @@ Clone a repository
 su - $USER
 cd /
 git clone https://github.com/Heberg-to-Oxygen/backup-mysql.git
+cd mariabackup/
 chmod u+x backup_alldb.sh
 ```
 
 Edit and config variable
 ``` bash
+su - $USER
+cd mariabackup/
 cp variable.template variable
 vim variable
 ```
@@ -63,7 +66,9 @@ vim variable
 ### Option S3
 If you want a copy in an S3, you must create it, know the credentials and configure the variable file
 ``` bash
-vim variable
+su - $USER
+aws configure
+vim mariabackup/variable
 ```
 
 ## Use
@@ -76,6 +81,7 @@ cd mariabackup/
 
 Create a crontab to launch the script automatically
 ``` bash
+su - $USER
 crontab -e
 15 00 * * * cd /$PATH/mariabackup && /bin/bash backup_alldb.sh
 ```
