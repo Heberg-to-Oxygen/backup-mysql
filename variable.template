@@ -23,7 +23,7 @@ db_user=""                              # set your user password
 db_password=""                          # set your password db
 
 # S3 config
-s3_backup=yes				# yes or no
+s3_backup=no				# yes or no
 s3_retention_day=90			# retention of days in S3
 s3_name="h2o-backup-mysql"		# s3 name on aws or other cloud
 s3_path="lab1.ta-info.net"		# if our use sub folder
