@@ -3,7 +3,7 @@
 # Author : DJERBI Florian
 # Object : Run full backup and incremental backup for all mariadb
 # Creation Date : 01/04/2024
-# Modification Date : 03/10/2024
+# Modification Date : 03/12/2024
 ###########################
 
 #
@@ -33,7 +33,9 @@ function init_script(){
 function backup_full(){
     last_full_number=$1
     last_full_number=$((${last_full_number}+1))
-    mariabackup --backup --stream=mbstream --user=${db_user} --password=${db_password} --extra-lsndir=${folder_backup}/${backup_full_name}-${last_full_number} |gzip > ${folder_backup}/${backup_full_name}-${last_full_number}.gz
+#    mariabackup --backup --stream=mbstream --user=${db_user} --password=${db_password} --extra-lsndir=${folder_backup}/${backup_full_name}-${last_full_number}
+    mariabackup --backup --user=${db_user} --password=${db_password} --target-dir=${folder_backup}/${backup_full_name}-${last_full_number}
+    tar -cvzf ${folder_backup}/${backup_full_name}-${last_full_number}.tar.gz ${folder_backup}/${backup_full_name}-${last_full_number} 
 }
 
 function backup_inc(){
@@ -43,10 +45,10 @@ function backup_inc(){
     new_inc_number=$((${last_inc_number}+1))
     if [[ -z ${last_inc_name} ]];then
         msg "Run incremental backup by last full !"
-        mariabackup --backup --stream=mbstream --user=${db_user} --password=${db_password} --incremental-basedir=${folder_backup}/${backup_full_name}-${last_full_number} --extra-lsndir=${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number} |gzip > ${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number}.gz
+        mariabackup --backup --stream=mbstream --user=${db_user} --password=${db_password} --incremental-basedir=${folder_backup}/${backup_full_name}-${last_full_number} --extra-lsndir=${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number}
     else
         msg "Run incremental backup by last incremental !"
-        mariabackup --backup --stream=mbstream --user=${db_user} --password=${db_password} --incremental-basedir=${folder_backup}/${backup_inc_name}-${last_full_number}-${last_inc_number} --extra-lsndir=${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number} |gzip > ${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number}.gz
+        mariabackup --backup --stream=mbstream --user=${db_user} --password=${db_password} --incremental-basedir=${folder_backup}/${backup_inc_name}-${last_full_number}-${last_inc_number} --extra-lsndir=${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number}
     fi
 }
 
