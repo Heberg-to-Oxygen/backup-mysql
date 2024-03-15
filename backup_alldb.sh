@@ -44,7 +44,7 @@ function check_last_full(){
         if [ ${last_full_count} -eq 0 ];then
             msg "Run full backup !"
             sleep 3
-            # backup_full "${last_full_number}"
+            backup_full "${last_full_number}"
         else
             msg "Run inc backup !"
             sleep 3
@@ -56,9 +56,10 @@ function check_last_full(){
 function backup_full(){
     last_full_number=$1
     last_full_number=$((${last_full_number}+1))
-    mariabackup --backup --user=${db_user} --password=${db_password} --target-dir=${folder_backup}/${backup_full_name}-${last_full_number} >> ${last_log_file} 2>&1
+    target_dir="${folder_backup}/${backup_full_name}-${last_full_number}"
+    mariabackup --backup --user=${db_user} --password=${db_password} --target-dir=${target_dir} >> ${last_log_file} 2>&1
     msg "Run tar gz last backup ${backup_full_name}-${last_full_number}"
-    tar -cvzf ${folder_backup}/${backup_full_name}-${last_full_number}.tar.gz -P ${folder_backup}/${backup_full_name}-${last_full_number} >> ${last_log_file}
+    tar -cvzf ${target_dir}.tar.gz -P ${target_dir} >> ${last_log_file}
 }
 
 function backup_inc(){
@@ -66,17 +67,16 @@ function backup_inc(){
     last_inc_name=$(find ${folder_backup} -type f -name ${backup_inc_name}-${last_full_number}* -printf "%T@ %Tc %p\n" |sort -n |tail -n 1)
     last_inc_number=$(echo "${last_inc_name}" |cut -f4 -d/ |cut -f3 -d- |cut -f1 -d.)
     new_inc_number=$((${last_inc_number}+1))
+    target_dir="${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number}"
     if [[ -z ${last_inc_name} ]];then
+	incremental_basedir="${folder_backup}/${backup_full_name}-${last_full_number}"
         msg "Run incremental backup by last full !"
-        mariabackup --backup --user=${db_user} --password=${db_password} --incremental-basedir=${folder_backup}/${backup_full_name}-${last_full_number} --target-dir=${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number} >> ${last_log_file} 2>&1
     else
+	incremental_basedir="${folder_backup}/${backup_inc_name}-${last_full_number}-${last_inc_number}"
         msg "Run incremental backup by last incremental !"
-        mariabackup --backup --user=${db_user} --password=${db_password} --incremental-basedir=${folder_backup}/${backup_inc_name}-${last_full_number}-${last_inc_number} --target-dir=${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number} >> ${last_log_file} 2>&1
     fi
-    tar -cvzf ${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number}.tar.gz -P ${folder_backup}/${backup_inc_name}-${last_full_number}-${new_inc_number} >> ${last_log_file}
-}
-
-function delete_last_folder_backup(){
+    mariabackup --backup --user=${db_user} --password=${db_password} --incremental-basedir=${incremental_basedir} --target-dir=${target_dir} >> ${last_log_file} 2>&1
+    tar -cvzf ${target_dir}.tar.gz -P ${target_dir} >> ${last_log_file}
 }
 
 function check_old_backup(){
@@ -122,4 +122,3 @@ function main(){
 }
 
 main "$@"
-
