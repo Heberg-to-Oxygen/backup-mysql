@@ -113,36 +113,33 @@ function main(){
     datetime_now=$(date +"%D %T")
     echo  "[${datetime_now}] : Run script backup mariadb" > ${last_log_file}
     init_script "$@"
-    while test $# -gt 0; do
-        param=$(echo "$1" | tr '[:upper:]' '[:lower:]')
-        case "$param" in
-	   full | f)
-                backup_full "$@"
-                check_old_backup "$@"
-                sync_s3 "$@"
-                last_log_in_log "$@"
-		exit 0
-		;;
-	   inc |incremental | i)
-                backup_inc "$@"
-                check_old_backup "$@"
-                sync_s3 "$@"
-                last_log_in_log "$@"
-		exit 0
-		;;
-	    -* | --* | *)
-	        echo "Nothing"
-		exit 0
-	esac
-	shift
-    done
+    param=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+    case "$param" in
+        full | f)
+            backup_full "$@"
+            check_old_backup "$@"
+            sync_s3 "$@"
+            last_log_in_log "$@"
+    	exit 0
+    	;;
+        inc | incremental | i)
+            backup_inc "$@"
+            check_old_backup "$@"
+            sync_s3 "$@"
+            last_log_in_log "$@"
+    	exit 0
+    	;;
+        -* | --* | *)
+            echo "Nothing"
+    	exit 0
+    esac
+    shift
     if [[ $# -eq 0 ]];then
         check_all "$@"
     fi
 }
 
 function check_all(){
-    echo "Normal run"
     datetime_now=$(date +"%D %T")
     echo  "[${datetime_now}] : Run script backup mariadb" > ${last_log_file}
     init_script "$@"
