@@ -3,7 +3,7 @@
 # Author : DJERBI Florian
 # Object : Run full backup and incremental backup for all mariadb
 # Creation Date : 01/04/2024
-# Modification Date : 03/15/2024
+# Modification Date : 03/18/2024
 ###########################
 
 #
@@ -31,30 +31,22 @@ function init_script(){
 }
 
 function check_last_full(){
-    last_full_name=$(find ${folder_backup} -type f -name ${backup_full_name}-*.gz -printf "%T@ %Tc %p\n" |sort -n |tail -n 1)
-    if [[ -z ${last_full_name} ]];then
+    number_full_backup=$(find ${folder_backup} -type f -name ${backup_full_name}-* |wc -l)
+    name_full_backup=$(find ${folder_backup} -type f -name ${backup_full_name}-* |sort -n |tail -n 1)
+    time_last_full=$(find ${folder_backup} -type f -name ${backup_full_name}-* -mtime -${incremental_day})
+    if [[ ${number_full_backup} -eq 0 ]] || [[ -z ${time_last_full} ]];then
         msg "Run first full backup !"
-	last_full_number=0
         sleep 3
-	backup_full "${last_full_number}"
+	backup_full
     else
-        last_full_number=$(echo "${last_full_name}" |cut -f4 -d/ |cut -f2 -d- |cut -f1 -d.)
-	((incremental_day-=1))
-        last_full_count=$(find ${folder_backup} -type f -name ${backup_full_name}-* -mtime -${incremental_day} -printf "%T@ %Tc %p\n" |wc -l)
-        if [ ${last_full_count} -eq 0 ];then
-            msg "Run full backup !"
-            sleep 3
-            backup_full "${last_full_number}"
-        else
-            msg "Run inc backup !"
-            sleep 3
-            backup_inc "${last_full_number}"
-        fi
+        msg "Run inc backup !"
+        sleep 3
+        backup_inc
     fi
 }
 
 function backup_full(){
-    last_full_number=$1
+    last_full_number=$(find ${folder_backup} -type f -name ${backup_full_name}-* |sort -n |tail -n 1 |cut -f4 -d/ |cut -f2 -d- |cut -f1 -d.)
     last_full_number=$((${last_full_number}+1))
     target_dir="${folder_backup}/${backup_full_name}-${last_full_number}"
     mariabackup --backup --user=${db_user} --password=${db_password} --target-dir=${target_dir} >> ${last_log_file} 2>&1
@@ -63,7 +55,7 @@ function backup_full(){
 }
 
 function backup_inc(){
-    last_full_number=$1
+    last_full_number=$(find ${folder_backup} -type f -name ${backup_full_name}-* |sort -n |tail -n 1 |cut -f4 -d/ |cut -f2 -d- |cut -f1 -d.)
     last_inc_name=$(find ${folder_backup} -type f -name ${backup_inc_name}-${last_full_number}* -printf "%T@ %Tc %p\n" |sort -n |tail -n 1)
     last_inc_number=$(echo "${last_inc_name}" |cut -f4 -d/ |cut -f3 -d- |cut -f1 -d.)
     new_inc_number=$((${last_inc_number}+1))
@@ -118,6 +110,39 @@ function last_log_in_log(){
 }
 
 function main(){
+    datetime_now=$(date +"%D %T")
+    echo  "[${datetime_now}] : Run script backup mariadb" > ${last_log_file}
+    init_script "$@"
+    while test $# -gt 0; do
+        param=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+        case "$param" in
+	   full | f)
+                backup_full "$@"
+                check_old_backup "$@"
+                sync_s3 "$@"
+                last_log_in_log "$@"
+		exit 0
+		;;
+	   inc |incremental | i)
+                backup_inc "$@"
+                check_old_backup "$@"
+                sync_s3 "$@"
+                last_log_in_log "$@"
+		exit 0
+		;;
+	    -* | --* | *)
+	        echo "Nothing"
+		exit 0
+	esac
+	shift
+    done
+    if [[ $# -eq 0 ]];then
+        check_all "$@"
+    fi
+}
+
+function check_all(){
+    echo "Normal run"
     datetime_now=$(date +"%D %T")
     echo  "[${datetime_now}] : Run script backup mariadb" > ${last_log_file}
     init_script "$@"
