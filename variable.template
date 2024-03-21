@@ -3,7 +3,7 @@
 # Author : DJERBI Florian
 # Object : Variable Template
 # Creation Date : 01/05/2024
-# Modification Date : 03/10/2024
+# Modification Date : 03/20/2024
 ###########################
 
 #
@@ -11,7 +11,7 @@
 #
 
 incremental_day=7                       # day before full backup
-full_retention=3                        # retention day for full backup
+retention_day=21			# retention of days in local machine
 folder_backup=""                        # folder for backups
 backup_full_name="backup_full"          # name file/folder full backup
 backup_inc_name="backup_inc"            # name file/folder inc backup

@@ -3,7 +3,7 @@
 # Author : DJERBI Florian
 # Object : Run full backup and incremental backup for all mariadb
 # Creation Date : 01/04/2024
-# Modification Date : 03/18/2024
+# Modification Date : 03/20/2024
 ###########################
 
 #
@@ -79,12 +79,12 @@ function check_old_backup(){
             rm -rf ${old_backup_name}
         fi
     fi
-    count_full_backup=$(find ${folder_backup} -type f -name ${backup_full_name}-*.gz| wc -l)
-    if [ ${count_full_backup} -gt ${full_retention} ]; then
-        old_full_number=$(find ${folder_backup} -type f -name ${backup_full_name}-*.gz -printf "%T@ %Tc %p\n" |sort -n |head -n 1 |cut -f4 -d/ |cut -f2 -d- |cut -f1 -d.)
-	if [ -n ${folder_backup} ] && [ -n ${backup_full_name} ] && [ -n ${old_full_number} ] ;then
+    old_full_name=$(find ${folder_backup} -type f -name ${backup_full_name}-*.gz -mtime ${retention_day})
+    if [ ! -z ${old_full_name} ]; then
+        old_full_number=$(echo ${old_full_name} |cut -f4 -d/ |cut -f2 -d- |cut -f1 -d.)
+	if [ ! -z ${folder_backup} ] && [ ! -z ${backup_full_name} ] && [ ! -z ${old_full_number} ] ;then
 	    rm -rf ${folder_backup}/${backup_full_name}-${old_full_number}*
-	    rm -rf ${folder_backup}/${backup_inc_name}-${old_full_number}*
+            rm -rf ${folder_backup}/${backup_inc_name}-${old_full_number}*
             msg "Delete full and incremental backup ${old_full_number}"
 	fi
     fi
@@ -117,36 +117,31 @@ function main(){
     case "$param" in
         full | f)
             backup_full "$@"
-            check_old_backup "$@"
-            sync_s3 "$@"
-            last_log_in_log "$@"
-    	exit 0
-    	;;
+            next_function "$@"
+    	    exit 0
+    	    ;;
         inc | incremental | i)
             backup_inc "$@"
-            check_old_backup "$@"
-            sync_s3 "$@"
-            last_log_in_log "$@"
-    	exit 0
-    	;;
+            next_function "$@"
+    	    exit 0
+    	    ;;
+	"")
+            check_last_full "$@"
+            next_function "$@"
+	    exit 0
+	    ;;
         -* | --* | *)
             echo "Nothing"
-    	exit 0
+    	    exit 0
     esac
     shift
-    if [[ $# -eq 0 ]];then
-        check_all "$@"
-    fi
 }
 
-function check_all(){
-    datetime_now=$(date +"%D %T")
-    echo  "[${datetime_now}] : Run script backup mariadb" > ${last_log_file}
-    init_script "$@"
-    check_last_full "$@"
+function next_function(){
     check_old_backup "$@"
     sync_s3 "$@"
     last_log_in_log "$@"
 }
 
 main "$@"
+
