@@ -3,7 +3,7 @@
 # Author : DJERBI Florian
 # Object : Run full backup and incremental backup for all mariadb
 # Creation Date : 01/04/2024
-# Modification Date : 03/20/2024
+# Modification Date : 03/21/2024
 ###########################
 
 #
@@ -28,14 +28,19 @@ function init_script(){
         touch ${log_file}
 	touch ${last_log_file}
     fi
+    if [ -z ${folder_backup} ] || [ -z ${backup_full_name} ] || [ -z ${backup_inc_name} ];then
+        msg "Variable folder_backup or backup_full_name or backup_inc_name is empty"
+	exit 0
+    fi
 }
 
 function check_last_full(){
     number_full_backup=$(find ${folder_backup} -type f -name ${backup_full_name}-* |wc -l)
     name_full_backup=$(find ${folder_backup} -type f -name ${backup_full_name}-* |sort -n |tail -n 1)
     time_last_full=$(find ${folder_backup} -type f -name ${backup_full_name}-* -mtime -${incremental_day})
-    if [[ ${number_full_backup} -eq 0 ]] || [[ -z ${time_last_full} ]];then
-        msg "Run first full backup !"
+    count_folder=$(find ${folder_backup}/ -type d -name ${backup_inc_name}* -o -type d -name ${backup_full_name}* |wc -l)
+    if [[ ${number_full_backup} -eq 0 ]] || [[ -z ${time_last_full} ]] || [[ ${count_folder} -eq 0 ]];then
+        msg "Run full backup !"
         sleep 3
 	backup_full
     else
